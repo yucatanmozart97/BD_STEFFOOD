@@ -1,0 +1,402 @@
+create table dono(
+	id serial primary key,
+	nome_completo varchar(255) not null,
+	email varchar(255) unique not null,
+	telefone varchar(11) unique not null,
+	cpf char(11) unique not null,
+	rg char(9) unique not null
+);
+
+create table plano(
+	id serial primary key,
+	nome varchar(27) not null,
+	descricao varchar(255) not null,
+	comissao_porc real not null,
+	taxa_porc real not null,
+	mensalidade real not null
+);
+
+create table especialidade(
+	id serial primary key,
+	nome varchar(50) not null,
+	descricao varchar(100)
+);
+
+
+create table produto(
+	id serial primary key,
+	nome varchar(50) not null,
+	descricao varchar(100)
+);
+
+create table banco(
+	id serial primary key,
+	nome varchar(50) not null
+);
+
+create table conta_bancaria_dono(
+	id int primary key references dono(id),
+	fk_banco int not null,
+	agencia char(4) not null,
+	conta char(7) not null,
+	digito char(1) not null
+);
+
+create table modalidade(
+	id serial primary key,
+	nome varchar(27) not null
+);
+
+create table entregador(
+	id serial primary key,
+	nome varchar(100) not null,
+	cpf char(11) unique not null,
+	telefone varchar(11) unique not null,
+	email varchar(100) unique not null,
+	cnh char(11) unique,
+	fk_modalidade int not null,
+	constraint fk_modalidade foreign key (fk_modalidade) references modalidade(id)
+);
+
+create table conta_bancaria_entregador(
+	id int primary key references entregador(id),
+	fk_banco int not null,
+	agencia char(4) not null,
+	conta char(7) not null,
+	digito char(1) not null
+);
+
+
+create table endereco(
+	id serial primary key,
+	cep char(8) not null,
+	estado char(2) not null,
+	cidade varchar(50) not null,
+	bairro varchar(27) not null,
+	rua varchar(50) not null,
+	numero varchar(5) not null,
+	complemento varchar(50)
+);
+
+create table loja(
+	id serial primary key,
+	nome varchar(50) not null,
+	cnpj char(14) unique not null,
+	telefone varchar(11) unique not null,
+	entrega_pedido char(1) not null,
+	data_inscricao timestamp without time zone,
+	fk_dono int not null,
+	fk_plano int not null,
+	fk_endereco int not null,
+	fk_especialidade int not null,
+	constraint fk_dono foreign key (fk_dono) references dono(id),
+	constraint fk_plano foreign key (fk_plano) references plano(id),
+	constraint fk_endereco_loja foreign key (fk_endereco) references endereco(id),
+	constraint fk_especialidade foreign key (fk_especialidade) references especialidade(id),
+	check(entrega_pedido = '1' or entrega_pedido = '0')
+);
+
+create table loja_produto(
+	id serial primary key,
+	fk_loja int not null,
+	fk_produto int not null,
+	preco real not null,
+	constraint fk_loja foreign key (fk_loja) references loja(id),
+	constraint fk_produto foreign key (fk_produto) references produto(id)
+);
+
+create table usuario(
+	id serial primary key,
+	nome varchar(50),
+	email varchar(100) unique not null,
+	telefone varchar(11) unique not null,
+	cpf varchar(11) unique
+);
+
+create table cartao(
+	id serial primary key,
+	tipo char(1) not null,
+	numero char(16) not null,
+	nome_impressao varchar(54) not null,
+	validade char(4) not null,
+	cvv char(4) not null,
+	apelido_cartao varchar(27) not null,
+	cpf_ou_cnpj_titular varchar(14) not null,
+	fk_usuario int not null,
+	check(tipo = 'C' or tipo = 'D' or tipo = 'A' or tipo = 'R'),
+	constraint fk_usuario_cartao foreign key (fk_usuario) references usuario(id)
+);
+
+
+create table forma_pagamento(
+	id serial primary key,
+	nome varchar(27) not null
+);
+
+create table pedido(
+	id serial primary key,
+	fk_usuario int not null,
+	data_pedido timestamp without time zone,
+	retirar char(1) not null,
+	fk_entregador int,
+	taxa_entrega real,
+	data_entrega timestamp without time zone,
+	fk_forma_pagamento int not null,
+	fk_loja int not null,
+	fk_endereco int,
+	valor_total real,
+	constraint fk_loja_pedido foreign key (fk_loja) references loja(id),
+	constraint fk_usuario_pedido foreign key (fk_usuario) references usuario(id),
+	constraint fk_entregador_pedido foreign key (fk_entregador) references entregador(id),
+	constraint fk_forma_pegamento foreign key (fk_forma_pagamento) references forma_pagamento(id),
+	constraint fk_endereco_pedido foreign key (fk_endereco) references endereco(id),
+	check(retirar = '1' or retirar = '0')		
+);
+
+create table item(
+	id serial primary key,
+	fk_loja_produto int not null,
+	fk_pedido int not null,
+	desconto real,
+	quantidade int not null,
+	constraint fk_loja_produto foreign key (fk_loja_produto) references loja_produto(id),
+	constraint fk_pedido foreign key (fk_pedido) references pedido(id) 
+);
+
+create table avaliacao(
+	id serial primary key,
+	comentario varchar(255) not null,
+	nota int not null,
+	fk_pedido int,
+	fk_loja_produto int,
+	constraint fk_pedido_avaliacao foreign key (fk_pedido) references pedido(id),
+	constraint fk_loja_produto_avaliacao foreign key (fk_loja_produto) references loja_produto(id),
+	check(nota >= 0 and nota <= 10)	
+);
+
+create table resposta(
+	id int primary key references avaliacao(id),
+	comentario varchar(255) not null
+);
+
+create table pagamento(
+	id serial primary key,
+	comissao_steffood real,
+	pagar_loja real,
+	fk_loja int,
+	mensalidade int,
+	mes_pagamento date,
+	constraint fk_loja_pagamento foreign key (fk_loja) references loja(id)
+);
+
+create index idx_cidade_bairro on endereco (cidade, bairro);
+
+create index idx_nome_usuario on usuario (nome);
+
+create or replace function function_faturamento(dia timestamp without time zone, loja_escolhida int,
+                                                OUT _resultado real)
+returns real as $faturamento_loja$
+declare
+faturamento_loja real;
+begin
+SELECT sum(preco * quantidade) into _resultado
+from item 
+inner join loja_produto on loja_produto.id = item.fk_loja_produto
+inner join loja on loja.id = loja_produto.fk_loja
+inner join produto on produto.id = loja_produto.fk_produto
+inner join pedido on pedido.id = item.fk_pedido
+inner join usuario on usuario.id = pedido.fk_usuario where loja.id = loja_escolhida
+and data_pedido >= dia and data_pedido <= (dia + interval '30 day');
+return;
+end ;
+$faturamento_loja$ language plpgsql;
+
+create or replace function function_validar_cpf(cpfEntrada varchar(11))
+   returns text as $validar_cpf$
+declare
+validar_cpf text;
+soma1 integer := 0;
+soma2 integer := 0;
+cpfArray varchar[];
+teste1 integer = 1;
+teste2 integer = 1;
+resto1 integer = 0;
+resto2 integer = 0;
+begin
+        cpfArray = regexp_split_to_array(cpfEntrada, '');
+        if length(cpfEntrada) != 11 or (cpfArray[1] = cpfArray[2]) and (cpfArray[2] = cpfArray[3])
+        and (cpfArray[3] = cpfArray[4]) and (cpfArray[4] = cpfArray[5]) and (cpfArray[5] = cpfArray[6])
+        and (cpfArray[6] = cpfArray[7]) and (cpfArray[7] = cpfArray[8]) and (cpfArray[8] = cpfArray[9])
+        and (cpfArray[9] = cpfArray[10]) and (cpfArray[10] = cpfArray[11])
+        then
+        validar_cpf = 'Cpf não está no tamanho correto ou inválido';
+        else 
+   for teste in reverse 10..2 loop
+   raise notice 'teste1: %, soma1: %', teste1, teste;
+   soma1 := soma1 + (Cast(cpfArray[teste1] as integer) * teste);
+   teste1 = teste1 + 1;
+     end loop;
+     teste1 := 1;
+     resto1 = mod((soma1 * 10), 11);
+     if resto1 = 10 then
+     resto1 = 0;
+     end if;
+     if resto1 = cast(cpfArray[10] as integer) 
+     then
+           soma1 := 0;
+            for teste in reverse 11..2 loop
+             soma1 := soma1 + (Cast(cpfArray[teste1] as integer) * teste);
+             raise notice 'teste1 2: %, soma1 2: %', teste1, teste;
+             teste1 = teste1 + 1;
+             end loop;
+             resto2 = mod((soma1 * 10), 11);
+             if resto2 = 10 then
+             resto2 = 0;
+             end if;
+               if resto2 = cast(cpfArray[11] as integer)
+                then    
+                    validar_cpf = cpfEntrada;
+                    else 
+                    validar_cpf = 'Cpf Inválido';
+                    end if;
+      else 
+        validar_cpf = 'Cpf inválido';
+      end if;
+      end if;
+return validar_cpf;
+end;
+$validar_cpf$ language plpgsql;
+
+create or replace function function_validar_usuario(nomeEntrada varchar(50), 
+                                                emailEntrada varchar(255),
+                                                telefoneEntrada varchar(11),
+                                                 cpfEntrada varchar(11))
+   returns text as $validar_usuario$
+declare
+validar_usuario text;
+begin
+    
+if length(nomeEntrada) < 3
+    then
+        validar_usuario = 'Nome muito curto';
+elseif strpos(emailEntrada, '@') < 3 or position('.com' in emailEntrada) < 10
+    then
+        validar_usuario = 'Email inválido';
+elseif (select function_validar_cpf(cpfEntrada)) != cpfEntrada
+then 
+    validar_usuario = 'Cpf inválido';
+else         
+    insert into usuario(nome, email, telefone, cpf) values (nomeEntrada, emailEntrada, telefoneEntrada, 
+                                                           cpfEntrada); 
+     validar_usuario = 'Cadastro realizado com sucesso';
+end if;
+return validar_usuario;
+end;
+$validar_usuario$ language plpgsql;
+
+create or replace view view_produtos_mais_vendidos as 
+select produto.nome as "Produto",
+sum(item.quantidade) as "Quantidade"
+from item 
+inner join loja_produto on loja_produto.id = item.fk_loja_produto
+inner join produto on produto.id = loja_produto.fk_produto
+group by produto.nome
+order by 2 desc;
+
+create or replace view view_pedidos_entregues as 
+select usuario.nome as "Cliente", loja.nome as "Loja", 
+loja_produto.preco as "Valor unitario", item.quantidade as "Quantidade",
+item.desconto as "Desconto em reais",
+round(cast(loja_produto.preco * item.quantidade - item.desconto as NUMERIC), 2) as "Total"
+from item 
+inner join loja_produto on loja_produto.id = item.fk_loja_produto
+inner join loja on loja.id = loja_produto.fk_loja
+inner join produto on produto.id = loja_produto.fk_produto
+inner join pedido on pedido.id = item.fk_pedido
+inner join usuario on usuario.id = pedido.fk_usuario;
+
+create or replace view view_entregadores_entregas as 
+select Distinct (pedido.id) as "Numero do pedido", entregador.nome as "Entregador",
+modalidade.nome as "Modalidade", loja.nome as "Loja", endereco.cidade as "Cidade",
+endereco.rua as "Rua", endereco.numero as "Numero", usuario.nome as "Cliente",
+pedido.data_entrega as "Horario da entrega"
+from item 
+inner join loja_produto on loja_produto.id = item.fk_loja_produto
+inner join loja on loja.id = loja_produto.fk_loja
+inner join pedido on pedido.id = item.fk_pedido
+inner join entregador on entregador.id = pedido.fk_entregador
+inner join modalidade on modalidade.id = entregador.fk_modalidade
+inner join endereco on endereco.id = pedido.fk_endereco
+inner join usuario on usuario.id = pedido.fk_usuario;
+
+
+create or replace view view_avaliacao_loja as 
+select produto.nome as "Produto", loja.nome as "Loja", usuario.nome as "Cliente", (avaliacao.nota / 2) as "Nota",
+avaliacao.comentario as "Comentario",
+resposta.comentario as "Resposta" from pedido 
+left join loja on loja.id = pedido.fk_loja
+left join usuario on usuario.id = pedido.fk_usuario
+right join avaliacao on pedido.id = avaliacao.fk_pedido
+left join loja_produto on loja_produto.id = avaliacao.fk_loja_produto
+left join produto on produto.id = loja_produto.fk_produto
+left join resposta on resposta.id = avaliacao.id;
+
+create or replace function function_mensalidade(loja_escolhida int,
+                                                OUT _resultado real)
+returns real as $mensalidade_loja$
+declare
+faturamento_loja real;
+begin
+SELECT mensalidade into _resultado
+from plano inner join loja on plano.id = loja.fk_plano where loja.id = loja_escolhida;
+return;
+end ;
+$mensalidade_loja$ language plpgsql;
+
+create or replace procedure proc_calculo_pagamento_loja(idLoja int, dataVerificar date)
+    language plpgsql
+    as $calc$
+    declare
+faturamento real = (Select function_faturamento(dataVerificar, idLoja));
+comissaoConta real = faturamento * (select plano.comissao_porc from plano 
+inner join loja on plano.id = loja.fk_plano where loja.id = idLoja);
+faturamento_loja real;
+    begin
+    faturamento_loja = faturamento - comissaoConta;
+    insert into pagamento(comissao_steffood, pagar_loja, fk_loja, mes_pagamento) 
+    values (comissaoConta, faturamento_loja, idLoja, dataVerificar);
+     commit; 
+     
+    if function_mensalidade(idLoja) = 150 then
+     update pagamento set mensalidade = 150, pagar_loja = pagar_loja - 150
+     where fk_loja = idLoja and comissao_steffood = comissaoConta;
+     
+     else 
+     update pagamento set mensalidade = 100, pagar_loja = pagar_loja - 150
+     where fk_loja = idLoja and comissao_steffood = comissaoConta;
+    end if;
+    
+    if faturamento >= 1800 then
+     commit;
+     else
+     rollback;
+       end if;
+       return;
+    end; $calc$;
+
+create or replace function function_valor_total(idPedido int)
+returns real as $valor_total$
+declare
+valor_total_func real;
+taxa_entrega_func real;
+begin
+taxa_entrega_func = (select distinct (taxa_entrega) from pedido where pedido.id = idPedido);
+valor_total_func = (select sum(preco * quantidade - desconto) as valor 
+                               from item 
+               inner join loja_produto on loja_produto.id = item.fk_loja_produto 
+               inner join pedido on pedido.id = item.fk_pedido
+               where fk_pedido = idPedido);
+               update pedido set valor_total = round(CAST(valor_total_func + taxa_entrega_func as numeric), 2) where pedido.id = idPedido;
+return valor_total_func + taxa_entrega_func;
+end ;
+$valor_total$ language plpgsql;
